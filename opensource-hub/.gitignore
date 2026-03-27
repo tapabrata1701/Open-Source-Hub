@@ -1,0 +1,15 @@
+# Dependency folders
+backend/node_modules/
+frontend/node_modules/
+
+# Environment variables (CRITICAL)
+backend/.env
+frontend/.env
+.env
+
+# Build outputs
+frontend/dist/
+frontend/build/
+
+# OS generated files
+.DS_Store
