@@ -46,8 +46,8 @@ app.set("trust proxy", 1);
 
 app.use(
   session({
-    name: "oshub.sid",
-    secret: process.env.SESSION_SECRET || "oshub-secret-dev",
+    name: "connect.sid",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     proxy: true,
