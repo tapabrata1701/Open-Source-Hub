@@ -33,7 +33,10 @@ app.use(
 app.use(
   express.json({
     verify: (req, res, buf) => {
-      if (req.originalUrl.startsWith("/api/webhooks")) {
+      if (
+        req.originalUrl.startsWith("/api/webhooks") ||
+        req.originalUrl === "/webhook"
+      ) {
         req.rawBody = buf.toString();
       }
     },
@@ -128,7 +131,87 @@ const isAdmin = (req, res, next) => {
   res.status(403).json({ error: "Access denied: Admins only" });
 };
 
+// Webhook Handler Function
+const handleGitHubWebhook = async (req, res) => {
+  try {
+    const signature = req.headers["x-hub-signature-256"];
+    const secret = process.env.GITHUB_WEBHOOK_SECRET;
+
+    // Secure Verification
+    if (signature && secret && req.rawBody) {
+      const hmac = crypto.createHmac("sha256", secret);
+      const digest = "sha256=" + hmac.update(req.rawBody).digest("hex");
+      try {
+        if (
+          !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))
+        ) {
+          return res.status(403).send("Forbidden: Invalid Signature");
+        }
+      } catch (e) {
+        return res.status(403).send("Forbidden: Crypto Buffer Mismatch length");
+      }
+    } else if (process.env.NODE_ENV === "production") {
+      return res.status(401).send("Unauthorized: Missing signature or secret");
+    }
+
+    // Process various GitHub events for scoring
+    const event = req.headers["x-github-event"];
+    const payload = req.body;
+    let githubUsername = "";
+    let scoreToAdd = 0;
+
+    if (event === "push") {
+      githubUsername = payload.pusher && payload.pusher.name;
+      scoreToAdd = 10;
+    } else if (event === "pull_request") {
+      githubUsername = payload.sender && payload.sender.login;
+      if (payload.action === "opened") {
+        scoreToAdd = 20;
+      } else if (
+        payload.action === "closed" &&
+        payload.pull_request &&
+        payload.pull_request.merged
+      ) {
+        scoreToAdd = 30;
+      }
+    } else if (event === "issues") {
+      githubUsername = payload.sender && payload.sender.login;
+      if (payload.action === "opened") {
+        scoreToAdd = 5;
+      }
+    } else if (event === "watch" || event === "star") {
+      githubUsername = payload.sender && payload.sender.login;
+      if (payload.action === "started" || payload.action === "created") {
+        scoreToAdd = 2;
+      }
+    }
+
+    if (githubUsername && scoreToAdd > 0) {
+      const user = await User.findOne({ githubUsername });
+      if (user) {
+        user.totalScore = (user.totalScore || 0) + scoreToAdd;
+        await user.save();
+        console.log(
+          `Updated score for ${githubUsername} -> +${scoreToAdd} (total: ${user.totalScore})`,
+        );
+      } else {
+        console.log(`User ${githubUsername} not found for scoring.`);
+      }
+    }
+
+    res.status(200).send("Webhook Received");
+  } catch (err) {
+    console.error("Webhook Error:", err);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
 // --- API ROUTES ---
+
+// Root route
+app.get("/", (req, res) => {
+  res.json({ message: "OSHub Backend is running" });
+});
 
 // Auth Routes
 app.get(
@@ -306,79 +389,10 @@ app.get("/api/leaderboard", async (req, res) => {
 });
 
 // GitHub Webhook Receiver
-app.post("/api/webhooks/github", async (req, res) => {
-  try {
-    const signature = req.headers["x-hub-signature-256"];
-    const secret = process.env.GITHUB_WEBHOOK_SECRET;
+app.post("/api/webhooks/github", handleGitHubWebhook);
 
-    // Secure Verification
-    if (signature && secret && req.rawBody) {
-      const hmac = crypto.createHmac("sha256", secret);
-      const digest = "sha256=" + hmac.update(req.rawBody).digest("hex");
-      try {
-        if (
-          !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))
-        ) {
-          return res.status(403).send("Forbidden: Invalid Signature");
-        }
-      } catch (e) {
-        return res.status(403).send("Forbidden: Crypto Buffer Mismatch length");
-      }
-    } else if (process.env.NODE_ENV === "production") {
-      return res.status(401).send("Unauthorized: Missing signature or secret");
-    }
-
-    // Process various GitHub events for scoring
-    const event = req.headers["x-github-event"];
-    const payload = req.body;
-    let githubUsername = "";
-    let scoreToAdd = 0;
-
-    if (event === "push") {
-      githubUsername = payload.pusher && payload.pusher.name;
-      scoreToAdd = 10;
-    } else if (event === "pull_request") {
-      githubUsername = payload.sender && payload.sender.login;
-      if (payload.action === "opened") {
-        scoreToAdd = 20;
-      } else if (
-        payload.action === "closed" &&
-        payload.pull_request &&
-        payload.pull_request.merged
-      ) {
-        scoreToAdd = 30;
-      }
-    } else if (event === "issues") {
-      githubUsername = payload.sender && payload.sender.login;
-      if (payload.action === "opened") {
-        scoreToAdd = 5;
-      }
-    } else if (event === "watch" || event === "star") {
-      githubUsername = payload.sender && payload.sender.login;
-      if (payload.action === "started" || payload.action === "created") {
-        scoreToAdd = 2;
-      }
-    }
-
-    if (githubUsername && scoreToAdd > 0) {
-      const user = await User.findOne({ githubUsername });
-      if (user) {
-        user.totalScore = (user.totalScore || 0) + scoreToAdd;
-        await user.save();
-        console.log(
-          `Updated score for ${githubUsername} -> +${scoreToAdd} (total: ${user.totalScore})`,
-        );
-      } else {
-        console.log(`User ${githubUsername} not found for scoring.`);
-      }
-    }
-
-    res.status(200).send("Webhook Received");
-  } catch (err) {
-    console.error("Webhook Error:", err);
-    res.status(500).send("Internal Server Error");
-  }
-});
+// Alternative webhook route for convenience
+app.post("/webhook", handleGitHubWebhook);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
