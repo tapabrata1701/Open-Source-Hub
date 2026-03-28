@@ -43,18 +43,21 @@ app.use(
   }),
 );
 app.set("trust proxy", 1);
+
 app.use(
   session({
+    name: "oshub.sid",
     secret: process.env.SESSION_SECRET || "oshub-secret-dev",
     resave: false,
     saveUninitialized: false,
+    proxy: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000,
     },
-  }),
+  })
 );
 
 app.use(passport.initialize());
