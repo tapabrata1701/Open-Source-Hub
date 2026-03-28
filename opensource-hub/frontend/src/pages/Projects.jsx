@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import API_BASE_URL from "../config";
 
 const Projects = () => {
   const [projects, setProjects] = useState([]);
@@ -23,8 +24,8 @@ const Projects = () => {
     const init = async () => {
       try {
         const [meRes, projRes] = await Promise.all([
-          axios.get("/api/auth/me").catch(() => ({ data: null })),
-          axios.get("/api/projects"),
+          axios.get(`${API_BASE_URL}/api/auth/me`, { withCredentials: true }).catch(() => ({ data: null })),
+          axios.get(`${API_BASE_URL}/api/projects`),
         ]);
         setUser(meRes.data);
         if (Array.isArray(projRes.data)) {
@@ -40,7 +41,6 @@ const Projects = () => {
     };
     init();
   }, []);
-  const API = import.meta.env.VITE_API_URL;
   const handleJoinProject = async (projectId) => {
     if (!user) {
       toast.error("Please log in to join projects");
@@ -49,7 +49,9 @@ const Projects = () => {
     }
 
     try {
-      await axios.post(`${API}/api/projects/join/${projectId}`,{},
+      await axios.post(`${API_BASE_URL}/api/projects/${projectId}/join`, {}, {
+        withCredentials: true,
+      });
       { withCredentials: true }
     );
       toast.success("Successfully joined!");

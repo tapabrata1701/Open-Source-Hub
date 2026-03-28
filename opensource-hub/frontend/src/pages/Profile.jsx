@@ -3,6 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { Trophy, Star, Terminal } from "lucide-react";
 import toast from "react-hot-toast";
+import API_BASE_URL from "../config";
 
 const Profile = () => {
   const [user, setUser] = useState({
@@ -22,27 +23,26 @@ const Profile = () => {
   });
 
   const refreshUser = async () => {
-  try {
-    const res = await axios.get(
-      `${import.meta.env.VITE_API_URL}/api/auth/me`,
-      { withCredentials: true }
-    );
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
+        withCredentials: true,
+      });
 
-    setUser(res.data);
-    setForm({
-      name: res.data.name || "",
-      number: res.data.number || "",
-      year: res.data.year || "",
-      branch: res.data.branch || "",
-      section: res.data.section || "",
-    });
-  } catch (error) {
-    toast.error("Session expired. Please log in again.");
-    window.location.href = "/login";
-  } finally {
-    setLoading(false);
-  }
-};
+      setUser(res.data);
+      setForm({
+        name: res.data.name || "",
+        number: res.data.number || "",
+        year: res.data.year || "",
+        branch: res.data.branch || "",
+        section: res.data.section || "",
+      });
+    } catch (error) {
+      toast.error("Session expired. Please log in again.");
+      window.location.href = "/login";
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     refreshUser();
@@ -51,7 +51,7 @@ const Profile = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.put("/api/auth/me", form);
+      const res = await axios.put(`${API_BASE_URL}/api/auth/me`, form);
       setUser(res.data);
       setIsEditing(false);
       toast.success("Profile updated successfully");
@@ -62,7 +62,7 @@ const Profile = () => {
 
   const handleLeaveProject = async (projectId) => {
     try {
-      await axios.post(`/api/projects/${projectId}/leave`);
+      await axios.post(`${API_BASE_URL}/api/projects/${projectId}/leave`);
       setUser((prev) => ({
         ...prev,
         selectedProjects: prev.selectedProjects.filter(

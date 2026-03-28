@@ -3,7 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { ShieldAlert, Trash2, Users } from "lucide-react";
 import toast from "react-hot-toast";
-const API = import.meta.env.VITE_API_URL;
+import API_BASE_URL from "../config";
 const Admin = () => {
   const [projects, setProjects] = useState([]);
   const [newProject, setNewProject] = useState({
@@ -21,8 +21,8 @@ const Admin = () => {
     const fetchAdminData = async () => {
       try {
         const [meRes, projRes] = await Promise.all([
-          axios.get(`${API}/api/auth/me`, { withCredentials: true }),
-          axios.get(`${API}/api/projects`, { withCredentials: true }),
+          axios.get(`${API_BASE_URL}/api/auth/me`, { withCredentials: true }),
+          axios.get(`${API_BASE_URL}/api/projects`, { withCredentials: true }),
         ]);
 
         if (meRes.data.role !== "admin") {
@@ -42,7 +42,7 @@ const Admin = () => {
   const handleCreateProject = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("/api/projects", newProject);
+      const res = await axios.post(`${API_BASE_URL}/api/projects`, newProject);
       setProjects([...projects, res.data]);
       setNewProject({
         title: "",
@@ -63,7 +63,7 @@ const Admin = () => {
     if (!window.confirm("Are you sure you want to delete this project?"))
       return;
     try {
-      await axios.delete(`/api/projects/${id}`);
+      await axios.delete(`${API_BASE_URL}/api/projects/${id}`);
       setProjects(projects.filter((p) => p._id !== id));
       toast.success("Project deleted");
     } catch (err) {
