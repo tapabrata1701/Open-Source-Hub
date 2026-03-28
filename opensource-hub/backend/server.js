@@ -223,7 +223,7 @@ const handleGitHubWebhook = async (req, res) => {
     let scoreToAdd = 0;
 
     if (event === "push") {
-      githubUsername = payload.pusher && payload.pusher.name;
+      githubUsername = payload.sender && payload.sender.login;
       scoreToAdd = 10;
     } else if (event === "pull_request") {
       githubUsername = payload.sender && payload.sender.login;
