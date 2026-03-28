@@ -84,9 +84,8 @@ if (process.env.GITHUB_CLIENT_ID) {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL:
-          process.env.NODE_ENV === "production"
-            ? `${process.env.BACKEND_URL}/api/auth/github/callback`
-            : "/api/auth/github/callback",
+          (process.env.BACKEND_URL || "http://localhost:5000") +
+          "/api/auth/github/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
