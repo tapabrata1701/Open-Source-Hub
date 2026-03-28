@@ -22,23 +22,27 @@ const Profile = () => {
   });
 
   const refreshUser = async () => {
-    try {
-      const res = await axios.get("/api/auth/me");
-      setUser(res.data);
-      setForm({
-        name: res.data.name || "",
-        number: res.data.number || "",
-        year: res.data.year || "",
-        branch: res.data.branch || "",
-        section: res.data.section || "",
-      });
-    } catch (error) {
-      toast.error("Session expired. Please log in again.");
-      window.location.href = "/login";
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const res = await axios.get(
+      `${import.meta.env.VITE_API_URL}/api/auth/me`,
+      { withCredentials: true }
+    );
+
+    setUser(res.data);
+    setForm({
+      name: res.data.name || "",
+      number: res.data.number || "",
+      year: res.data.year || "",
+      branch: res.data.branch || "",
+      section: res.data.section || "",
+    });
+  } catch (error) {
+    toast.error("Session expired. Please log in again.");
+    window.location.href = "/login";
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     refreshUser();

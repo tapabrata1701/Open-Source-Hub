@@ -40,7 +40,7 @@ const Projects = () => {
     };
     init();
   }, []);
-
+  const API = import.meta.env.VITE_API_URL;
   const handleJoinProject = async (projectId) => {
     if (!user) {
       toast.error("Please log in to join projects");
@@ -49,7 +49,9 @@ const Projects = () => {
     }
 
     try {
-      await axios.post(`/api/projects/${projectId}/join`);
+      await axios.post(`${API}/api/projects/join/${projectId}`,{},
+      { withCredentials: true }
+    );
       toast.success("Successfully joined!");
       setProjects(
         projects.map((p) =>

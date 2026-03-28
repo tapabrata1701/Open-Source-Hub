@@ -3,7 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { ShieldAlert, Trash2, Users } from "lucide-react";
 import toast from "react-hot-toast";
-
+const API = import.meta.env.VITE_API_URL;
 const Admin = () => {
   const [projects, setProjects] = useState([]);
   const [newProject, setNewProject] = useState({
@@ -21,8 +21,8 @@ const Admin = () => {
     const fetchAdminData = async () => {
       try {
         const [meRes, projRes] = await Promise.all([
-          axios.get("/api/auth/me"),
-          axios.get("/api/projects"),
+          axios.get(`${API}/api/auth/me`, { withCredentials: true }),
+          axios.get(`${API}/api/projects`, { withCredentials: true }),
         ]);
 
         if (meRes.data.role !== "admin") {
