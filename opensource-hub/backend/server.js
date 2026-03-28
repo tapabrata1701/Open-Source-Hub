@@ -13,6 +13,19 @@ const Project = require("./models/Project");
 
 const app = express();
 
+const frontendUrl = (
+  process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? "https://open-source-hub-eta.vercel.app" : "http://localhost:5173")
+).replace(/\/$/, "");
+
+let backendUrl = (
+  process.env.BACKEND_URL || (process.env.NODE_ENV === "production" ? "https://open-source-hub-backend.onrender.com" : "http://localhost:5000")
+).replace(/\/$/, "");
+
+// 1. TRUST PROXY MUST BE FIRST
+// Render uses proxy routing. This MUST be placed before the rate limiter and session,
+// otherwise req.ip and req.protocol evaluate to local IPs and http, failing Secure cookies!
+app.set("trust proxy", 1);
+
 // --- Rate Limiting ---
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -22,10 +35,24 @@ const apiLimiter = rateLimit({
 app.use("/api/", apiLimiter);
 
 // --- Middleware ---
+// 2. DYNAMIC CORS FOR VERCEL
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "https://open-source-hub-eta.vercel.app",
-    credentials: true,
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        "https://open-source-hub-eta.vercel.app",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        frontendUrl
+      ];
+      // Dynamic origin check handles undefined Origins (curl/server) or Vercel preview environments
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+        callback(null, origin); // Dynamically reflects origin correctly ignoring trailing slash mismatches
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true, // REQUIRED for cookies
   }),
 );
 
@@ -42,19 +69,20 @@ app.use(
     },
   }),
 );
-app.set("trust proxy", 1);
 
+// 3. SECURE CROSS-SITE SESSION CONFIGURATION
 app.use(
   session({
     name: "connect.sid",
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    proxy: true,
+    secret: process.env.SESSION_SECRET || "github_oauth_secret_default",
+    resave: false, // best practice
+    saveUninitialized: false, // do not save empty sessions
+    proxy: true, // Forces trust proxy configuration
     cookie: {
-      secure: true,
+      secure: process.env.NODE_ENV === "production" || true, // MUST BE TRUE cross-domain
       httpOnly: true,
-      sameSite: "none",
+      sameSite: "none", // REQUIRED cross-domain (Vercel -> Render)
+      partitioned: true, // CRITICAL: Fixes Chrome's new 3rd Party Cookie CHIPS blocking!
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
@@ -80,19 +108,13 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-let backendUrl = (process.env.BACKEND_URL || "http://localhost:5000").replace(
-  /\/$/,
-  "",
-);
 if (backendUrl.includes("undefined")) {
   console.warn(
     "BACKEND_URL contains undefined; overriding to default localhost backend URL",
   );
   backendUrl = "http://localhost:5000";
 }
-const frontendUrl = (
-  process.env.FRONTEND_URL || "http://localhost:5173"
-).replace(/\/$/, "");
+
 if (frontendUrl.includes("undefined")) {
   console.warn(
     "FRONTEND_URL contains undefined; overriding to default localhost frontend URL",
