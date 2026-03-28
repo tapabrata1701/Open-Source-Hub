@@ -77,13 +77,24 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-const backendUrl = (process.env.BACKEND_URL || "http://localhost:5000").replace(
+let backendUrl = (process.env.BACKEND_URL || "http://localhost:5000").replace(
   /\/$/,
   "",
 );
+if (backendUrl.includes("undefined")) {
+  console.warn(
+    "BACKEND_URL contains undefined; overriding to default localhost backend URL",
+  );
+  backendUrl = "http://localhost:5000";
+}
 const frontendUrl = (
   process.env.FRONTEND_URL || "http://localhost:5173"
 ).replace(/\/$/, "");
+if (frontendUrl.includes("undefined")) {
+  console.warn(
+    "FRONTEND_URL contains undefined; overriding to default localhost frontend URL",
+  );
+}
 
 if (process.env.GITHUB_CLIENT_ID) {
   const callbackUrlValue =
@@ -229,15 +240,27 @@ app.get("/", (req, res) => {
   res.json({ message: "OSHub Backend is running" });
 });
 
+const getCallbackUrl = (req) => {
+  const host = backendUrl || `${req.protocol}://${req.get("host")}`;
+  return `${host}/api/auth/github/callback`;
+};
+
 // Auth Routes
-app.get(
-  "/api/auth/github",
-  passport.authenticate("github", { scope: ["user:email"] }),
-);
+app.get("/api/auth/github", (req, res, next) => {
+  passport.authenticate("github", {
+    scope: ["user:email"],
+    callbackURL: getCallbackUrl(req),
+  })(req, res, next);
+});
 
 app.get(
   "/api/auth/github/callback",
-  passport.authenticate("github", { failureRedirect: "/login" }),
+  (req, res, next) => {
+    passport.authenticate("github", {
+      failureRedirect: "/login",
+      callbackURL: getCallbackUrl(req),
+    })(req, res, next);
+  },
   (req, res) => {
     const redirectProfile = `${frontendUrl}/profile`;
     console.log("GitHub OAuth redirect to frontend profile:", redirectProfile);
