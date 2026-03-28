@@ -23,31 +23,33 @@ const Profile = () => {
   });
 
   const refreshUser = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
-        withCredentials: true,
-      });
+  try {
+    const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
+      withCredentials: true,
+    });
 
-      setUser(res.data);
-      setForm({
-        name: res.data.name || "",
-        number: res.data.number || "",
-        year: res.data.year || "",
-        branch: res.data.branch || "",
-        section: res.data.section || "",
-      });
-    } catch (error) {
-      if (error.response && error.response.status === 401) {
-        toast.error("Session expired. Please log in again.");
-        window.location.href = "/login";
-      } else {
-        console.error("Profile fetch error:", error);
-        toast.error("Failed to load profile. Please try again.");
-      }
-    } finally {
-      setLoading(false);
+    setUser(res.data);
+    setForm({
+      name: res.data.name || "",
+      number: res.data.number || "",
+      year: res.data.year || "",
+      branch: res.data.branch || "",
+      section: res.data.section || "",
+    });
+
+    setLoading(false);
+  } catch (error) {
+    // Only redirect if actually unauthorized
+    if (error.response && error.response.status === 401) {
+      toast.error("Session expired. Please log in again.");
+      window.location.href = "/login";
+    } else {
+      // Backend may be sleeping → retry instead of logout
+      console.log("Retrying profile fetch...");
+      setTimeout(refreshUser, 1500);
     }
-  };
+  }
+};
 
   useEffect(() => {
     refreshUser();
