@@ -37,8 +37,13 @@ const Profile = () => {
         section: res.data.section || "",
       });
     } catch (error) {
-      toast.error("Session expired. Please log in again.");
-      window.location.href = "/login";
+      if (error.response && error.response.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        window.location.href = "/login";
+      } else {
+        console.error("Profile fetch error:", error);
+        toast.error("Failed to load profile. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -51,8 +56,11 @@ const Profile = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.put(`${API_BASE_URL}/api/auth/me`, form);
-      setUser(res.data);
+const res = await axios.put(
+  `${API_BASE_URL}/api/auth/me`,
+  form,
+  { withCredentials: true }
+);      setUser(res.data);
       setIsEditing(false);
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -62,7 +70,11 @@ const Profile = () => {
 
   const handleLeaveProject = async (projectId) => {
     try {
-      await axios.post(`${API_BASE_URL}/api/projects/${projectId}/leave`);
+      await axios.post(
+  `${API_BASE_URL}/api/projects/${projectId}/leave`,
+  {},
+  { withCredentials: true }
+);
       setUser((prev) => ({
         ...prev,
         selectedProjects: prev.selectedProjects.filter(
