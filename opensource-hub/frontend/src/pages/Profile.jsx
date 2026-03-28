@@ -22,7 +22,7 @@ const Profile = () => {
     section: "",
   });
 
-  const refreshUser = async () => {
+const refreshUser = async () => {
   try {
     const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
       withCredentials: true,
@@ -39,13 +39,17 @@ const Profile = () => {
 
     setLoading(false);
   } catch (error) {
-    // Only redirect if actually unauthorized
-    if (error.response && error.response.status === 401) {
-      toast.error("Session expired. Please log in again.");
-      window.location.href = "/login";
+    if (error.response) {
+      // Only logout if actually unauthorized
+      if (error.response.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        window.location.href = "/login";
+      } else {
+        console.error("Server error:", error.response);
+      }
     } else {
-      // Backend may be sleeping → retry instead of logout
-      console.log("Retrying profile fetch...");
+      // Network error / Render cold start
+      console.log("Backend waking up... retrying");
       setTimeout(refreshUser, 1500);
     }
   }
