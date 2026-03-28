@@ -77,15 +77,28 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+const backendUrl = (process.env.BACKEND_URL || "http://localhost:5000").replace(
+  /\/$/,
+  "",
+);
+const frontendUrl = (
+  process.env.FRONTEND_URL || "http://localhost:5173"
+).replace(/\/$/, "");
+
 if (process.env.GITHUB_CLIENT_ID) {
+  const callbackUrlValue =
+    process.env.NODE_ENV === "production"
+      ? `${backendUrl}/api/auth/github/callback`
+      : "/api/auth/github/callback";
+
+  console.log("GitHub OAuth callbackURL:", callbackUrlValue);
+
   passport.use(
     new GitHubStrategy(
       {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        callbackURL:
-          (process.env.BACKEND_URL || "http://localhost:5000") +
-          "/api/auth/github/callback",
+        callbackURL: callbackUrlValue,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -226,9 +239,9 @@ app.get(
   "/api/auth/github/callback",
   passport.authenticate("github", { failureRedirect: "/login" }),
   (req, res) => {
-    res.redirect(
-      `${process.env.FRONTEND_URL || "http://localhost:5173"}/profile`,
-    );
+    const redirectProfile = `${frontendUrl}/profile`;
+    console.log("GitHub OAuth redirect to frontend profile:", redirectProfile);
+    res.redirect(redirectProfile);
   },
 );
 
