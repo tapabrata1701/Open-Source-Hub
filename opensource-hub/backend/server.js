@@ -42,7 +42,7 @@ app.use(
     },
   }),
 );
-
+app.set("trust proxy", 1);
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "oshub-secret-dev",
