@@ -6,8 +6,14 @@ import { Link, useLocation } from "react-router-dom";
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const token = localStorage.getItem("token");
 
   const toggleMenu = () => setIsOpen(!isOpen);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+  };
 
   // Close the menu when navigating routes on mobile
   React.useEffect(() => {
@@ -49,17 +55,28 @@ const Navigation = () => {
               ))}
             </div>
             <div className="flex items-center gap-4">
-              <Link
-                to="/login"
-                className="text-sm font-bold text-text-dim hover:text-white transition-colors"
-              >
-                Log In
-              </Link>
-              <Link to="/signup">
-                <button className="glass px-6 py-2 rounded-full font-bold hover:bg-white/10 transition-colors shadow-[0_0_15px_rgba(34,211,238,0.2)] hover:shadow-[0_0_25px_rgba(168,85,247,0.4)]">
-                  Join Movement
+              {token ? (
+                <button
+                  onClick={handleLogout}
+                  className="glass px-6 py-2 rounded-full font-bold hover:bg-white/10 transition-colors border border-red-500/20 text-red-400 hover:text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_25px_rgba(239,68,68,0.3)]"
+                >
+                  Log Out
                 </button>
-              </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="text-sm font-bold text-text-dim hover:text-white transition-colors"
+                  >
+                    Log In
+                  </Link>
+                  <Link to="/signup">
+                    <button className="glass px-6 py-2 rounded-full font-bold hover:bg-white/10 transition-colors shadow-[0_0_15px_rgba(34,211,238,0.2)] hover:shadow-[0_0_25px_rgba(168,85,247,0.4)]">
+                      Join Movement
+                    </button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -97,18 +114,29 @@ const Navigation = () => {
             </div>
 
             <div className="mt-12 flex flex-col gap-4">
-              <Link
-                to="/login"
-                className="w-full text-center py-4 bg-white/5 border border-white/10 rounded-xl font-bold min-h-[48px] flex items-center justify-center"
-              >
-                Log In
-              </Link>
-              <Link
-                to="/signup"
-                className="w-full text-center py-4 bg-gradient-to-r from-accent-neon to-accent-cyan text-white font-bold rounded-xl min-h-[48px] flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.3)]"
-              >
-                Create Account
-              </Link>
+              {token ? (
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-center py-4 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 font-bold rounded-xl min-h-[48px] flex items-center justify-center transition-colors"
+                >
+                  Log Out
+                </button>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="w-full text-center py-4 bg-white/5 border border-white/10 rounded-xl font-bold min-h-[48px] flex items-center justify-center"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="w-full text-center py-4 bg-gradient-to-r from-accent-neon to-accent-cyan text-white font-bold rounded-xl min-h-[48px] flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.3)]"
+                  >
+                    Create Account
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}
