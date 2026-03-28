@@ -23,39 +23,44 @@ const Profile = () => {
   });
 
 const refreshUser = async () => {
-  try {
-    const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
-      withCredentials: true,
-    });
-
-    setUser(res.data);
-    setForm({
-      name: res.data.name || "",
-      number: res.data.number || "",
-      year: res.data.year || "",
-      branch: res.data.branch || "",
-      section: res.data.section || "",
-    });
-
-    setLoading(false);
-  } catch (error) {
-    if (error.response) {
-      // Only logout if actually unauthorized
-      if (error.response.status === 401) {
-        toast.error("Session expired. Please log in again.");
-        window.location.href = "/login";
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/auth/me`);
+      setUser(res.data);
+      setForm({
+        name: res.data.name || "",
+        number: res.data.number || "",
+        year: res.data.year || "",
+        branch: res.data.branch || "",
+        section: res.data.section || "",
+      });
+      setLoading(false);
+    } catch (error) {
+      if (error.response) {
+        if (error.response.status === 401) {
+          toast.error("Session expired. Please log in again.");
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+        } else {
+          console.error("Server error:", error.response);
+        }
       } else {
-        console.error("Server error:", error.response);
+        console.log("Backend waking up... retrying");
+        setTimeout(refreshUser, 1500);
       }
-    } else {
-      // Network error / Render cold start
-      console.log("Backend waking up... retrying");
-      setTimeout(refreshUser, 1500);
     }
-  }
-};
+  };
 
   useEffect(() => {
+    // Check if we just arrived from GitHub OAuth callback with a JWT
+    const urlParams = new URLSearchParams(window.location.search);
+    const incomingToken = urlParams.get("token");
+
+    if (incomingToken) {
+      localStorage.setItem("token", incomingToken);
+      // Clean up the URL securely so it doesn't show in history/copy-pastes
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     refreshUser();
   }, []);
 
@@ -63,10 +68,10 @@ const refreshUser = async () => {
     e.preventDefault();
     try {
 const res = await axios.put(
-  `${API_BASE_URL}/api/auth/me`,
-  form,
-  { withCredentials: true }
-);      setUser(res.data);
+        `${API_BASE_URL}/api/auth/me`,
+        form
+      );
+      setUser(res.data);
       setIsEditing(false);
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -77,10 +82,9 @@ const res = await axios.put(
   const handleLeaveProject = async (projectId) => {
     try {
       await axios.post(
-  `${API_BASE_URL}/api/projects/${projectId}/leave`,
-  {},
-  { withCredentials: true }
-);
+        `${API_BASE_URL}/api/projects/${projectId}/leave`,
+        {}
+      );
       setUser((prev) => ({
         ...prev,
         selectedProjects: prev.selectedProjects.filter(

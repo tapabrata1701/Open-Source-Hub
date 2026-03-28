@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import API_BASE_URL from "../config";
 
 const InputField = ({
@@ -58,8 +59,8 @@ const Login = () => {
       return;
     }
 
-    // Proceed to dashboard
-    navigate("/projects");
+    // Prevent fake email login navigation
+    toast("Please use the GitHub Login method above.", { icon: "👋" });
   };
 
   return (

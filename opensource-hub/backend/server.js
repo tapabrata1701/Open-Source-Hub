@@ -7,6 +7,7 @@ const session = require("express-session");
 const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
 const rateLimit = require("express-rate-limit");
+const jwt = require("jsonwebtoken");
 
 const User = require("./models/User");
 const Project = require("./models/Project");
@@ -98,15 +99,7 @@ mongoose
   .catch((err) => console.error("MongoDB Connection Error:", err));
 
 // --- Passport GitHub Configuration ---
-passport.serializeUser((user, done) => done(null, user._id));
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await User.findById(id);
-    done(null, user);
-  } catch (err) {
-    done(err, null);
-  }
-});
+// Removed serializeUser and deserializeUser since we are migrating to stateless JWT
 
 if (backendUrl.includes("undefined")) {
   console.warn(
@@ -173,14 +166,31 @@ if (process.env.GITHUB_CLIENT_ID) {
 }
 
 // --- Auth Middleware ---
-const isAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: "Not authenticated" });
+const isAuthenticated = async (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Not authenticated" });
+
+  try {
+    const verified = jwt.verify(
+      token,
+      process.env.SESSION_SECRET || "github_oauth_secret_default"
+    );
+    const user = await User.findById(verified.id);
+    if (!user) throw new Error("User not found");
+    // Assign mapped user to req.user for downstream handlers
+    req.user = user;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: "Not authenticated" });
+  }
 };
 
-const isAdmin = (req, res, next) => {
-  if (req.isAuthenticated() && req.user.role === "admin") return next();
-  res.status(403).json({ error: "Access denied: Admins only" });
+const isAdmin = async (req, res, next) => {
+  await isAuthenticated(req, res, () => {
+    if (req.user && req.user.role === "admin") next();
+    else res.status(403).json({ error: "Access denied: Admins only" });
+  });
 };
 
 // Webhook Handler Function
@@ -275,6 +285,7 @@ app.get("/api/auth/github", (req, res, next) => {
   passport.authenticate("github", {
     scope: ["user:email"],
     callbackURL: getCallbackUrl(req),
+    session: false,
   })(req, res, next);
 });
 
@@ -284,17 +295,23 @@ app.get(
     passport.authenticate("github", {
       failureRedirect: "/login",
       callbackURL: getCallbackUrl(req),
+      session: false,
     })(req, res, next);
   },
   (req, res) => {
-    const redirectProfile = `${frontendUrl}/profile`;
-    console.log("GitHub OAuth redirect to frontend profile:", redirectProfile);
+    // Generate stateless JWT to permanently solve cross-site cookies
+    const token = jwt.sign(
+      { id: req.user._id, role: req.user.role },
+      process.env.SESSION_SECRET || "github_oauth_secret_default",
+      { expiresIn: "7d" }
+    );
+    const redirectProfile = `${frontendUrl}/profile?token=${token}`;
+    console.log("GitHub OAuth generated JWT via Profile redirect.");
     res.redirect(redirectProfile);
   },
 );
 
-app.get("/api/auth/me", async (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Not authenticated" });
+app.get("/api/auth/me", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate(
       "selectedProjects",
