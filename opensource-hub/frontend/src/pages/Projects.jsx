@@ -24,23 +24,33 @@ const Projects = () => {
     const init = async () => {
       try {
         const [meRes, projRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/auth/me`, { withCredentials: true }).catch(() => ({ data: null })),
-          axios.get(`${API_BASE_URL}/api/projects`),
+          axios
+            .get(`${API_BASE_URL}/api/auth/me`, { withCredentials: true })
+            .catch(() => ({ data: null })),
+          axios.get(`${API_BASE_URL}/api/projects`, {
+            withCredentials: true,
+          }),
         ]);
+
         setUser(meRes.data);
+
         if (Array.isArray(projRes.data)) {
           setProjects(projRes.data);
         } else {
           setProjects([]);
-          toast.error("Backend is not returning JSON. Is the server running?");
+          toast.error(
+            "Backend is not returning JSON. Is the server running?"
+          );
         }
       } catch (err) {
         toast.error("Failed to connect to server");
         setProjects([]);
       }
     };
+
     init();
   }, []);
+
   const handleJoinProject = async (projectId) => {
     if (!user) {
       toast.error("Please log in to join projects");
@@ -49,18 +59,23 @@ const Projects = () => {
     }
 
     try {
-      await axios.post(`${API_BASE_URL}/api/projects/${projectId}/join`, {}, {
-        withCredentials: true,
-      });
-      { withCredentials: true }
-    );
+      await axios.post(
+        `${API_BASE_URL}/api/projects/${projectId}/join`,
+        {},
+        { withCredentials: true }
+      );
+
       toast.success("Successfully joined!");
+
       setProjects(
         projects.map((p) =>
           p._id === projectId
-            ? { ...p, participants: [...(p.participants || []), user._id] }
-            : p,
-        ),
+            ? {
+                ...p,
+                participants: [...(p.participants || []), user._id],
+              }
+            : p
+        )
       );
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to join");
@@ -87,6 +102,7 @@ const Projects = () => {
               Pick the open-source projects you want to contribute to.
             </p>
           </div>
+
           {user && (
             <button
               onClick={() => setShowModal(true)}
@@ -100,7 +116,6 @@ const Projects = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {projects.map((project, idx) => {
-            // Check if user's ID is in the participants array (works if populated or string IDs)
             const hasJoined =
               user &&
               project.participants?.some((id) => (id._id || id) === user._id);
@@ -111,7 +126,9 @@ const Projects = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: idx * 0.1 }}
-                className={`flex flex-col glass-super p-6 rounded-3xl transition-all duration-300 relative overflow-hidden group ${hasJoined ? "ring-2 ring-accent-cyan bg-white/5" : ""}`}
+                className={`flex flex-col glass-super p-6 rounded-3xl transition-all duration-300 relative overflow-hidden group ${
+                  hasJoined ? "ring-2 ring-accent-cyan bg-white/5" : ""
+                }`}
               >
                 {hasJoined && (
                   <div className="absolute top-4 right-4 text-accent-cyan">
@@ -141,6 +158,7 @@ const Projects = () => {
                         <BookOpen size={16} /> Docs
                       </a>
                     )}
+
                     <div className="flex gap-2">
                       {project.discordLink ? (
                         <a
@@ -156,6 +174,7 @@ const Projects = () => {
                           <MessageSquare size={16} /> No Chat
                         </div>
                       )}
+
                       <a
                         href={project.githubUrl}
                         target="_blank"
@@ -180,7 +199,6 @@ const Projects = () => {
         </div>
       </div>
 
-      {/* Add Project Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -201,34 +219,41 @@ const Projects = () => {
               >
                 <X size={24} />
               </button>
-              <h2 className="text-2xl font-bold mb-4">Submit New Project</h2>
-              <p className="text-text-dim mb-6 text-sm">
-                If your cohort's project isn't listed, add its GitHub URL here
-                so others can join.
-              </p>
+
+              <h2 className="text-2xl font-bold mb-4">
+                Submit New Project
+              </h2>
 
               <div className="space-y-4">
                 <input
                   type="text"
                   placeholder="Project Name"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-text-dim focus:outline-none focus:ring-1 focus:ring-accent-neon"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
                   value={newProject.title}
                   onChange={(e) =>
-                    setNewProject({ ...newProject, title: e.target.value })
+                    setNewProject({
+                      ...newProject,
+                      title: e.target.value,
+                    })
                   }
                 />
+
                 <input
                   type="text"
                   placeholder="GitHub Repository URL"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-text-dim focus:outline-none focus:ring-1 focus:ring-accent-neon"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
                   value={newProject.githubUrl}
                   onChange={(e) =>
-                    setNewProject({ ...newProject, githubUrl: e.target.value })
+                    setNewProject({
+                      ...newProject,
+                      githubUrl: e.target.value,
+                    })
                   }
                 />
+
                 <button
                   onClick={handleAddProject}
-                  className="w-full py-3 bg-gradient-to-r from-accent-neon to-accent-cyan text-white font-bold rounded-xl hover:opacity-90 transition-opacity mt-4"
+                  className="w-full py-3 bg-gradient-to-r from-accent-neon to-accent-cyan text-white font-bold rounded-xl"
                 >
                   Request Addition
                 </button>
