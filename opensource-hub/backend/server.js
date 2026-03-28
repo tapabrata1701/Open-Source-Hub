@@ -51,6 +51,7 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     },
   }),
@@ -82,7 +83,10 @@ if (process.env.GITHUB_CLIENT_ID) {
       {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        callbackURL: "/api/auth/github/callback",
+        callbackURL:
+          process.env.NODE_ENV === "production"
+            ? `${process.env.BACKEND_URL}/api/auth/github/callback`
+            : "/api/auth/github/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
