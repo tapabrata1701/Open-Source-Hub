@@ -275,6 +275,11 @@ app.get("/", (req, res) => {
   res.json({ message: "OSHub Backend is running" });
 });
 
+// Ping route for uptime monitors (e.g., Render wakefulness)
+app.get("/ping", (req, res) => {
+  res.status(200).send("Server awake");
+});
+
 const getCallbackUrl = (req) => {
   const host = backendUrl || `${req.protocol}://${req.get("host")}`;
   return `${host}/api/auth/github/callback`;
