@@ -241,12 +241,7 @@ const handleGitHubWebhook = async (req, res) => {
       if (payload.action === "opened") {
         scoreToAdd = 5;
       }
-    } else if (event === "watch" || event === "star") {
-      githubUsername = payload.sender && payload.sender.login;
-      if (payload.action === "started" || payload.action === "created") {
-        scoreToAdd = 2;
-      }
-    }
+    } 
 
     if (githubUsername && scoreToAdd > 0) {
       const user = await User.findOne({ githubUsername });
