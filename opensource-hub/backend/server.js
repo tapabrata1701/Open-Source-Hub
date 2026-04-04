@@ -459,7 +459,7 @@ app.delete("/api/projects/:id", isAdmin, async (req, res) => {
 // Leaderboard
 app.get("/api/leaderboard", async (req, res) => {
   try {
-    const users = await User.find()
+    const users = await User.find({ totalScore: { $gt: 0 } })
       .sort({ totalScore: -1 })
       .limit(50)
       .select("name githubUsername totalScore avatar_url rank");
