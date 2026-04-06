@@ -15,11 +15,17 @@ const Project = require("./models/Project");
 const app = express();
 
 const frontendUrl = (
-  process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? "https://open-source-hub-eta.vercel.app" : "http://localhost:5173")
+  process.env.FRONTEND_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://open-source-hub-eta.vercel.app"
+    : "http://localhost:5173")
 ).replace(/\/$/, "");
 
 let backendUrl = (
-  process.env.BACKEND_URL || (process.env.NODE_ENV === "production" ? "https://open-source-hub-backend.onrender.com" : "http://localhost:5000")
+  process.env.BACKEND_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://open-source-hub-backend.onrender.com"
+    : "http://localhost:5000")
 ).replace(/\/$/, "");
 
 // 1. TRUST PROXY MUST BE FIRST
@@ -44,10 +50,14 @@ app.use(
         "https://open-source-hub-eta.vercel.app",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        frontendUrl
+        frontendUrl,
       ];
       // Dynamic origin check handles undefined Origins (curl/server) or Vercel preview environments
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app")
+      ) {
         callback(null, origin); // Dynamically reflects origin correctly ignoring trailing slash mismatches
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -86,7 +96,7 @@ app.use(
       partitioned: true, // CRITICAL: Fixes Chrome's new 3rd Party Cookie CHIPS blocking!
       maxAge: 24 * 60 * 60 * 1000,
     },
-  })
+  }),
 );
 
 app.use(passport.initialize());
@@ -174,7 +184,7 @@ const isAuthenticated = async (req, res, next) => {
   try {
     const verified = jwt.verify(
       token,
-      process.env.SESSION_SECRET || "github_oauth_secret_default"
+      process.env.SESSION_SECRET || "github_oauth_secret_default",
     );
     const user = await User.findById(verified.id);
     if (!user) throw new Error("User not found");
@@ -222,10 +232,11 @@ const handleGitHubWebhook = async (req, res) => {
     let githubUsername = "";
     let scoreToAdd = 0;
 
-    if (event === "push") {
-      githubUsername = payload.sender && payload.sender.login;
-      scoreToAdd = 10;
-    } else if (event === "pull_request") {
+    // if (event === "push") {
+    //   githubUsername = payload.sender && payload.sender.login;
+    //   scoreToAdd = 10;
+    // } else 
+    if (event === "pull_request") {
       githubUsername = payload.sender && payload.sender.login;
       if (payload.action === "opened") {
         scoreToAdd = 20;
@@ -236,12 +247,13 @@ const handleGitHubWebhook = async (req, res) => {
       ) {
         scoreToAdd = 30;
       }
-    } else if (event === "issues") {
-      githubUsername = payload.sender && payload.sender.login;
-      if (payload.action === "opened") {
-        scoreToAdd = 5;
-      }
     } 
+    // else if (event === "issues") {
+    //   githubUsername = payload.sender && payload.sender.login;
+    //   if (payload.action === "opened") {
+    //     scoreToAdd = 5;
+    //   }
+    // }
 
     if (githubUsername && scoreToAdd > 0) {
       const user = await User.findOne({ githubUsername });
@@ -303,7 +315,7 @@ app.get(
     const token = jwt.sign(
       { id: req.user._id, role: req.user.role },
       process.env.SESSION_SECRET || "github_oauth_secret_default",
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
     const redirectProfile = `${frontendUrl}/profile?token=${token}`;
     console.log("GitHub OAuth generated JWT via Profile redirect.");
@@ -341,7 +353,7 @@ app.put("/api/auth/me", isAuthenticated, async (req, res) => {
     });
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, {
-      new: true,
+      returnDocument: "after",
     }).populate(
       "selectedProjects",
       "title author githubUrl desc documentationLink discordLink",
