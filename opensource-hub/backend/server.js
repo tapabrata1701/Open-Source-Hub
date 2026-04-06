@@ -237,14 +237,24 @@ const handleGitHubWebhook = async (req, res) => {
     //   scoreToAdd = 10;
     // } else 
     if (event === "pull_request") {
-      githubUsername = payload.sender && payload.sender.login;
+
+      // PR OPENED -> sender is correct (author opened PR)
       if (payload.action === "opened") {
+        githubUsername = payload.sender && payload.sender.login;
         scoreToAdd = 20;
-      } else if (
+      } 
+      
+      // PR MERGED -> must use PR author, not sender
+      else if (
         payload.action === "closed" &&
         payload.pull_request &&
         payload.pull_request.merged
       ) {
+        githubUsername =
+          payload.pull_request &&
+          payload.pull_request.user &&
+          payload.pull_request.user.login;
+
         scoreToAdd = 30;
       }
     } 
@@ -261,7 +271,7 @@ const handleGitHubWebhook = async (req, res) => {
         user.totalScore = (user.totalScore || 0) + scoreToAdd;
         await user.save();
         console.log(
-          `Updated score for ${githubUsername} -> +${scoreToAdd} (total: ${user.totalScore})`,
+          `Updated score for ${githubUsername} -> +${scoreToAdd} (total: ${user.totalScore})`
         );
       } else {
         console.log(`User ${githubUsername} not found for scoring.`);
