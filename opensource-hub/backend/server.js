@@ -232,43 +232,48 @@ const handleGitHubWebhook = async (req, res) => {
     let githubUsername = "";
     let scoreToAdd = 0;
 
-    // if (event === "push") {
-    //   githubUsername = payload.sender && payload.sender.login;
-    //   scoreToAdd = 10;
-    // } else 
-    if (event === "pull_request") {
+  if (event === "pull_request") {
 
-      // PR OPENED -> sender is correct (author opened PR)
-      if (payload.action === "opened") {
-        githubUsername = payload.sender && payload.sender.login;
-        scoreToAdd = 20;
-      } 
-      
-      // PR MERGED -> must use PR author, not sender
-      else if (
-        payload.action === "closed" &&
-        payload.pull_request &&
-        payload.pull_request.merged
-      ) {
-        githubUsername =
-          payload.pull_request &&
-          payload.pull_request.user &&
-          payload.pull_request.user.login;
+  // PR OPENED
+  if (payload.action === "opened") {
+    githubUsername = payload.sender && payload.sender.login;
+    scoreToAdd = 20;
+  } 
+  
+  // PR MERGED
+  else if (
+    payload.action === "closed" &&
+    payload.pull_request &&
+    payload.pull_request.merged
+  ) {
+    githubUsername =
+      payload.pull_request &&
+      payload.pull_request.user &&
+      payload.pull_request.user.login;
 
-        scoreToAdd = 30;
-      }
-    } 
-    // else if (event === "issues") {
-    //   githubUsername = payload.sender && payload.sender.login;
-    //   if (payload.action === "opened") {
-    //     scoreToAdd = 5;
-    //   }
-    // }
+    scoreToAdd = 30;
+  }
 
-    if (githubUsername && scoreToAdd > 0) {
+  // PR REJECTED (closed without merge)
+  else if (
+    payload.action === "closed" &&
+    payload.pull_request &&
+    !payload.pull_request.merged
+  ) {
+    githubUsername =
+      payload.pull_request &&
+      payload.pull_request.user &&
+      payload.pull_request.user.login;
+
+    scoreToAdd = -20;
+  }
+}
+
+    if (githubUsername && scoreToAdd !== 0) {
       const user = await User.findOne({ githubUsername });
       if (user) {
-        user.totalScore = (user.totalScore || 0) + scoreToAdd;
+        const newScore = (user.totalScore || 0) + scoreToAdd;
+        user.totalScore = Math.max(0, newScore);
         await user.save();
         console.log(
           `Updated score for ${githubUsername} -> +${scoreToAdd} (total: ${user.totalScore})`
