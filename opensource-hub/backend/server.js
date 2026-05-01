@@ -230,14 +230,14 @@ const handleGitHubWebhook = async (req, res) => {
     const event = req.headers["x-github-event"];
     const payload = req.body;
     let githubUsername = "";
-    let scoreToAdd = 0;
+    // let scoreToAdd = 0;
 
   if (event === "pull_request") {
 
   // PR OPENED
   if (payload.action === "opened") {
     githubUsername = payload.sender && payload.sender.login;
-    scoreToAdd = 20;
+    // scoreToAdd = 20;
   } 
   
   // PR MERGED
@@ -251,7 +251,7 @@ const handleGitHubWebhook = async (req, res) => {
       payload.pull_request.user &&
       payload.pull_request.user.login;
 
-    scoreToAdd = 30;
+    // scoreToAdd = 30;
   }
 
   // PR REJECTED (closed without merge)
@@ -265,10 +265,10 @@ const handleGitHubWebhook = async (req, res) => {
       payload.pull_request.user &&
       payload.pull_request.user.login;
 
-    scoreToAdd = -20;
+    // scoreToAdd = -20;
   }
 }
-
+/*
     if (githubUsername && scoreToAdd !== 0) {
       const user = await User.findOne({ githubUsername });
       if (user) {
@@ -282,6 +282,13 @@ const handleGitHubWebhook = async (req, res) => {
         console.log(`User ${githubUsername} not found for scoring.`);
       }
     }
+*/
+//logging only (no mutation)
+  if (githubUsername) {
+
+    console.log(`Contribution detected for ${githubUsername} (scoring disabled)`);
+
+  }
 
     res.status(200).send("Webhook Received");
   } catch (err) {
@@ -489,7 +496,7 @@ app.get("/api/leaderboard", async (req, res) => {
     const users = await User.find({ totalScore: { $gt: 0 } })
       .sort({ totalScore: -1 })
       .limit(50)
-      .select("name githubUsername totalScore avatar_url rank");
+      .select("name githubUsername totalScore avatar_url"); //rank is not computed seperately I am soring it later
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
